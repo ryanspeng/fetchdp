@@ -1,11 +1,17 @@
 #!/bin/env python
 # -*- encoding: utf-8 -*-
 
+import sys
 import time
+import json
+import socket
 import urllib2
 import traceback
 
 from bs4 import BeautifulSoup
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 def get_city(soup):
     for link in soup.find_all('a', class_='city'):
@@ -34,6 +40,19 @@ def get_shop_tel(soup):
             return span.string.strip()
     return ''
 
+def get_shop_score(soup):
+    for div in soup.find_all('div', class_='brief-info'):
+        score = []
+        for span in div.find_all('span', class_='item'):
+            s = span.string.strip()
+            try:
+                k, v = s.split('：')
+                score.append(float(v))
+            except:
+                pass
+        return score
+    return []
+
 def get_shop_center(soup):
     lng, lat = '', ''
     for scr in soup.find_all('script'):
@@ -50,19 +69,21 @@ def get_shop_center(soup):
     return lng, lat
 
 def fetch_url(url):
-    headers = {
-               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-               'Cache-Control': 'max-age=0',
-               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:46.0) Gecko/20100101 Firefox/46.0',
-              }
-    req = urllib2.Request(url, headers=headers)
-    print "req:", url
-    f = urllib2.urlopen(req)
-    code = f.getcode()
-    body = f.read()
-    f.close()
-    print url, code
-    return code, body
+    try:
+        headers = {
+                   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                   'Cache-Control': 'max-age=0',
+                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:46.0) Gecko/20100101 Firefox/46.0',
+                  }
+        req = urllib2.Request(url, headers=headers)
+        f = urllib2.urlopen(req)
+        code = f.getcode()
+        body = f.read()
+        f.close()
+        return code, body
+    except:
+        print "ERROR: fetch %s" % url
+        return 404, ''
 
 def get_shop_info(shop_id):
     url = "http://www.dianping.com/shop/%s" % shop_id
@@ -75,7 +96,7 @@ def get_shop_info(shop_id):
     soup = BeautifulSoup(body, 'lxml')
     lng, lat = get_shop_center(soup)
     x = {'city': get_city, 'category': get_category, 'shop_name': get_shop_name,
-         'shop_addr': get_shop_addr, 'shop_tel': get_shop_tel}
+         'shop_addr': get_shop_addr, 'shop_tel': get_shop_tel, 'score': get_shop_score}
     info = dict([(k, f(soup)) for k, f in x.items()])
     info['lng'] = lng
     info['lat'] = lat
@@ -88,7 +109,7 @@ def get_ids(soup):
 
 def get_shop_ids(page=1):
     #2为北京，10为美食，如需其他信息需要调整这个参数
-    url = "http://wap.dianping.com/shoplist/2/c/10/p%s" % page
+    url = "http://wap.dianping.com/shoplist/2/c/0/p%s" % page
     code, body = fetch_url(url)
     if code == 404:
         return None
@@ -98,6 +119,11 @@ def get_shop_ids(page=1):
     soup = BeautifulSoup(body, 'lxml')
     ids = get_ids(soup)
     return ids
+
+def write_result(info):
+    f = file('result', 'a')
+    print >>f, json.dumps(info)
+    f.close()
 
 def get_shop(page=1):
     try:
@@ -117,9 +143,12 @@ def get_shop(page=1):
             elif not info:
                 print "Ignore shop %s" % x
                 continue
-            print "INSERT INTO shop (id, city, category, shop_name, shop_addr, shop_tel, lng, lat) VALUES (%s, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (x, info['city'], info['category'], info['shop_name'], info['shop_addr'], info['shop_tel'], info['lng'], info['lat'])
+            info['id'] = x
+            write_result(info)
             time.sleep(6)
     except:
         print traceback.format_exc()
 
-get_shop(page=1)
+socket.setdefaulttimeout(60)
+#get_shop(page=1)
+print get_shop_info(32579131)
