@@ -7,6 +7,9 @@ import json
 import socket
 import urllib2
 import traceback
+import random
+import logging
+import logging.handlers
 
 from bs4 import BeautifulSoup
 
@@ -42,16 +45,16 @@ def get_shop_tel(soup):
 
 def get_shop_score(soup):
     for div in soup.find_all('div', class_='brief-info'):
-        score = []
+        score = {}
         for span in div.find_all('span', class_='item'):
             s = span.string.strip()
             try:
                 k, v = s.split('：')
-                score.append(float(v))
+                score[k] = float(v)
             except:
                 pass
         return score
-    return []
+    return {}
 
 def get_shop_center(soup):
     lng, lat = '', ''
@@ -75,14 +78,16 @@ def fetch_url(url):
                    'Cache-Control': 'max-age=0',
                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:46.0) Gecko/20100101 Firefox/46.0',
                   }
+        logging.getLogger().info("Request url: %s" % url)
         req = urllib2.Request(url, headers=headers)
         f = urllib2.urlopen(req)
         code = f.getcode()
         body = f.read()
         f.close()
+        logging.getLogger().info("Request url: %s, response code: %s" % (url, code))
         return code, body
     except:
-        print "ERROR: fetch %s" % url
+        logging.getLogger().info("Request url error: %s" % traceback.format_exc())
         return 404, ''
 
 def get_shop_info(shop_id):
@@ -95,11 +100,15 @@ def get_shop_info(shop_id):
 
     soup = BeautifulSoup(body, 'lxml')
     lng, lat = get_shop_center(soup)
+    score_info = get_shop_score(soup)
+    if score_info:
+        logging.getLogger().info("shop %s score: %s" % (shop_id, ','.join(['%s|%s' % (k, v) for k, v in score_info.items()])))
     x = {'city': get_city, 'category': get_category, 'shop_name': get_shop_name,
-         'shop_addr': get_shop_addr, 'shop_tel': get_shop_tel, 'score': get_shop_score}
+         'shop_addr': get_shop_addr, 'shop_tel': get_shop_tel}
     info = dict([(k, f(soup)) for k, f in x.items()])
     info['lng'] = lng
     info['lat'] = lat
+    info['score'] = score_info.values()
     return info
 
 def get_ids(soup):
@@ -127,28 +136,59 @@ def write_result(info):
 
 def get_shop(page=1):
     try:
+        logging.getLogger().info("Request shop list, page: %s" % page)
         ids = get_shop_ids(page)
+        logging.getLogger().info("Get shop list: %s" % str(ids))
         if ids is None:
-            print "Request shop list invaild"
-            return
+            logging.getLogger().error("Get shop list error (%s)" % page)
+            return False
         elif not ids:
-            print "Ignore"
-            return
+            logging.getLogger().error("Get shop list fail (%s)" % page)
+            return True
 
         for x in ids:
+            logging.getLogger().info("Request shop info, id: %s" % x)
             info = get_shop_info(x)
             if info is None:
-                print "Request shop info invaild"
-                return
+                logging.getLogger().error("Get shop info error (%s)" % x)
+                return False
             elif not info:
-                print "Ignore shop %s" % x
+                logging.getLogger().error("Get shop info fail (%s)" % x)
                 continue
-            info['id'] = x
-            write_result(info)
-            time.sleep(6)
+            if info.get('shop_name', ''):
+                info['id'] = x
+                write_result(info)
+            else:
+                logging.getLogger().warning("Miss shop info (%s), result: %s" % (x, str(info)))
+            t = random.randint(10, 20)
+            logging.getLogger().info("Sleep %s seconds" % t)
+            time.sleep(t)
+        return True
     except:
-        print traceback.format_exc()
+        logging.getLogger().error("Get shops error: %s" % traceback.format_exc())
+        return True
 
-socket.setdefaulttimeout(60)
-#get_shop(page=1)
-print get_shop_info(32579131)
+def set_logging():
+    log_handler = logging.FileHandler('service.log')
+    log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(process)d %(funcName)s:%(lineno)d %(message)s')
+    log_handler.setFormatter(log_formatter)
+
+    logger = logging.getLogger()
+    logger.addHandler(log_handler)
+    logger.setLevel(logging.INFO)
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print "%s start end" % sys.argv[0]
+        sys.exit()
+    start = int(sys.argv[1])
+    end = int(sys.argv[2]) + 1
+
+    socket.setdefaulttimeout(60)
+    set_logging()
+
+    for page in range(start, end):
+        if not get_shop(page):
+            break
+        if page % 1000 == 0:
+            time.sleep(600)
