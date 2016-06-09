@@ -99,6 +99,9 @@ def fetch_url(url):
         f.close()
         logging.getLogger().info("Request url: %s, response code: %s" % (url, code))
         return code, body
+    except urllib2.HTTPError, e:
+        logging.getLogger().info("Request url error: %s" % traceback.format_exc())
+        return e.code, ''
     except:
         logging.getLogger().info("Request url error: %s" % traceback.format_exc())
         return 404, ''
@@ -138,11 +141,19 @@ def get_shop_ids(url):
     #url = "http://wap.dianping.com/shoplist/2/c/0/p%s" % page
     #url = "http://www.dianping.com/search/category/2/10/p%s" % page
     #url = "http://www.dianping.com/search/category/2/10/g110/p%s" % page
+    global error_num
     code, body = fetch_url(url)
+    logging.getLogger().info("Request shop ids, response code: %s" % code)
+    if code == 200:
+        error_num = 0
+    if error_num > 10:
+        logging.getLogger().info("Request 404 num: %s" % error_num)
+        return 0, 'next'
     if code == 404:
-        return None
+        error_num += 1
+        return 0, False
     elif code != 200:
-        return False
+        return 0, None
 
     soup = BeautifulSoup(body, 'lxml')
     num, ids = get_ids(soup)
@@ -173,6 +184,8 @@ def get_shop(sids, url, page):
         if ids is None:
             logging.getLogger().error("Get shop list error (%s)" % page)
             return False
+        if ids == 'next':
+            return 51
         elif not ids:
             logging.getLogger().error("Get shop list fail (%s)" % page)
             return page+1
@@ -246,6 +259,7 @@ def set_logging():
     logger.addHandler(log_handler)
     logger.setLevel(logging.INFO)
 
+error_num = 0
 if __name__ == '__main__':
     socket.setdefaulttimeout(60)
     set_logging()
