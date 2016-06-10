@@ -224,14 +224,14 @@ def get_category_shop(category, region_id=None, big_region_id=None, page=1):
     if region_id is None and big_region_id is None:
         if page >= 51:
             return region_id, page, ''
-        url = "http://www.dianping.com/search/category/2/%s/%sp%s" % (categorys[category], category, page)
+        url = "http://www.dianping.com/search/category/2/%s/%sp%s" % (categorys.get(category, 10), category, page)
     elif region_id is None:
         if page >= 51:
             big_region_id += 1
             page = 1
         if big_region_id >= len(big_regions):
             return big_region_id, page, ''
-        url = "http://www.dianping.com/search/category/2/%s/%s%sp%s" % (categorys[category], category, big_regions[big_region_id], page)
+        url = "http://www.dianping.com/search/category/2/%s/%s%sp%s" % (categorys.get(category, 10), category, big_regions[big_region_id], page)
         return big_region_id, page, url
     else:
         if page >= 51:
@@ -239,7 +239,7 @@ def get_category_shop(category, region_id=None, big_region_id=None, page=1):
             page = 1
         if region_id >= len(regions):
             return region_id, page, ''
-        url = "http://www.dianping.com/search/category/2/%s/%s%sp%s" % (categorys[category], category, regions[region_id], page)
+        url = "http://www.dianping.com/search/category/2/%s/%s%sp%s" % (categorys.get(category, 10), category, regions[region_id], page)
     logging.getLogger().info("Get category shop url: %s", url)
     return region_id, page, url
 

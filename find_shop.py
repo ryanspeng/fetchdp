@@ -32,7 +32,7 @@ class GeoHandler(tornado.web.RequestHandler):
                 info['avg_score'] = sum(info['score'])/len(info['score'])
                 info['dist'] = x[1]
                 shop_infos.append(info)
-            self.write(json.dumps(shop_infos))
+            self.write(json.dumps({'code': 0, 'data':shop_infos}))
         except:
             self.write(json.dumps({'code': 1, 'err_msg': "请求异常"}))
 
