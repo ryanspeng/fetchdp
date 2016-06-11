@@ -169,6 +169,17 @@ def write_shop_id(sid):
     print >>f, sid
     f.close()
 
+def save_shop_info(sids, shop_id):
+    info = get_shop_info(shop_id)
+    if info and info.get('shop_name', ''):
+        info['id'] = shop_id
+        write_result(info)
+        sids.add(shop_id)
+        write_shop_id(shop_id)
+    else:
+        logging.getLogger().warning("Miss shop info (%s), result: %s" % (shop_id, str(info)))
+    return info
+
 def get_shop(sids, url, page):
     try:
         logging.getLogger().info("Request shop list, page: %s" % page)
@@ -195,20 +206,13 @@ def get_shop(sids, url, page):
                 logging.getLogger().info("Shop %s exist, ignore" % x)
                 continue
             logging.getLogger().info("Request shop info, id: %s" % x)
-            info = get_shop_info(x)
+            info = save_shop_info(sids, x)
             if info is None:
                 logging.getLogger().error("Get shop info error (%s)" % x)
                 return False
             elif not info:
                 logging.getLogger().error("Get shop info fail (%s)" % x)
                 continue
-            if info.get('shop_name', ''):
-                info['id'] = x
-                write_result(info)
-                sids.add(x)
-                write_shop_id(x)
-            else:
-                logging.getLogger().warning("Miss shop info (%s), result: %s" % (x, str(info)))
             t = random.randint(10, 20)
             logging.getLogger().info("Sleep %s seconds" % t)
             time.sleep(t)
@@ -269,21 +273,26 @@ if __name__ == '__main__':
     mode = sys.argv[1]
     if mode == '1':
         category = sys.argv[2]
-        page = int(sys.argv[3]) if len(sys.argv) == 4 else 1
-        while True:
+        page = int(sys.argv[3]) if len(sys.argv) >= 4 else 1
+        if len(sys.argv) == 5:
             region_id, page, url = get_category_shop(category, page=page)
             if url:
-                page = get_shop(sids, url, page)
-                if page is False:
+                get_shop(sids, url, page)
+        else:
+            while True:
+                region_id, page, url = get_category_shop(category, page=page)
+                if url:
+                    page = get_shop(sids, url, page)
+                    if page is False:
+                        break
+                else:
                     break
-            else:
-                break
     elif mode == '2':
         category = sys.argv[2]
         if len(sys.argv) >= 4:
             region = sys.argv[3]
-            if region is regions:
-                region_id = regions.index(regions)
+            if region in big_regions:
+                region_id = big_regions.index(region)
             else:
                 sys.exit()
         else:
@@ -313,7 +322,7 @@ if __name__ == '__main__':
                 sys.exit()
         else:
             region_id = 0
-        page = int(sys.argv[4]) if len(sys.argv) == 5 else 1
+        page = int(sys.argv[4]) if len(sys.argv) >= 5 else 1
 
         if len(sys.argv) == 6:
             region_id, page, url = get_category_shop(category, region_id=region_id, page=page)
@@ -328,3 +337,8 @@ if __name__ == '__main__':
                         break
                 else:
                     break
+    elif mode == '4':
+        if sys.argv[2] in sids:
+            logging.getLogger().info("Shop %s exist, ignore" % x)
+        else:
+            save_shop_info(sids, sys.argv[2])
