@@ -149,7 +149,7 @@ def get_shop_ids(url):
     if error_num > 10:
         logging.getLogger().info("Request 404 num: %s" % error_num)
         return 0, 'next'
-    if code == 404:
+    if code == 404 or code == 502:
         error_num += 1
         return 0, False
     elif code != 200:
@@ -339,6 +339,6 @@ if __name__ == '__main__':
                     break
     elif mode == '4':
         if sys.argv[2] in sids:
-            logging.getLogger().info("Shop %s exist, ignore" % x)
+            logging.getLogger().info("Shop %s exist, ignore" % sys.argv[2])
         else:
             save_shop_info(sids, sys.argv[2])
