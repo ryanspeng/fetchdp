@@ -109,7 +109,7 @@ def fetch_url(url):
 def get_shop_info(shop_id):
     url = "http://www.dianping.com/shop/%s" % shop_id
     code, body = fetch_url(url)
-    if code == 404:
+    if code == 404 or code == 502:
         return False
     elif code != 200:
         return None
