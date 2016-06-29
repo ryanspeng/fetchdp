@@ -120,7 +120,7 @@ def fetch_url(url):
         return e.code, ''
     except:
         logging.getLogger().info("Request url error: %s" % traceback.format_exc())
-        return 300, ''
+        return 302, ''
 
 def get_shop_info(shop_id):
     url = "http://www.dianping.com/shop/%s" % shop_id
