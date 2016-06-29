@@ -202,7 +202,7 @@ class Finder:
         self.region_id = None
         self.sub_region_id = None
         self.page = 1
-        self.error_num = 1
+        self.error_num = 0
 
     def change_region(self):
         self.page = 1
@@ -222,7 +222,7 @@ class Finder:
         if code == 200:
             self.error_num = 0
         if self.error_num > 10:
-            logging.getLogger().info("Request fail num: %s" % error_num)
+            logging.getLogger().info("Request fail num: %s" % self.error_num)
             self.change_region()
             return 0, []
         if code not in (200, 404, 403):
