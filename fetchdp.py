@@ -224,6 +224,7 @@ class Finder:
         if self.error_num > 10:
             logging.getLogger().info("Request fail num: %s" % self.error_num)
             self.change_region()
+            self.page = 0
             return 0, []
         if code not in (200, 404, 403):
             time.sleep(8)
