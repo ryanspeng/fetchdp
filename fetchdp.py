@@ -51,6 +51,9 @@ def get_category(soup):
 def get_shop_name(soup):
     for h1 in soup.find_all('h1', class_='shop-name'):
         return h1.contents[0].strip()
+    for div in soup.find_all('div', class_='shop-name'):
+        for h2 in div.find_all('h2'):
+            return h2.string.strip()
     return ''
 
 def get_shop_addr(soup):
@@ -187,7 +190,7 @@ def get_shops(sids, ids):
             elif not info:
                 logging.getLogger().error("Get shop info fail (%s)" % x)
                 continue
-            t = random.randint(10, 20)
+            t = random.randint(10, 15)
             logging.getLogger().info("Sleep %s seconds" % t)
             time.sleep(t)
         return True
