@@ -325,7 +325,7 @@ if __name__ == '__main__':
                 break
     else:
         if sys.argv[1] in sids:
-            logging.getLogger().info("Shop %s exist, ignore" % sys.argv[2])
+            logging.getLogger().info("Shop %s exist, ignore" % sys.argv[1])
         else:
             save_shop_info(sids, sys.argv[1])
 
